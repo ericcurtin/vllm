@@ -1,4 +1,4 @@
-regex # Replace re for higher-performance regex matching
+regex==2024.9.11 # Replace re for higher-performance regex matching
 cachetools
 psutil
 sentencepiece  # Required for LLaMA tokenizer.

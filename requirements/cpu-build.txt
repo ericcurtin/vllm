@@ -1,12 +1,14 @@
-# Temporarily used for x86 CPU backend to avoid performance regression of torch>2.6.0+cpu,
-# see https://github.com/pytorch/pytorch/pull/151218
+# Platform-specific torch versions to match requirements/cpu.txt
+# For x86_64: torch==2.6.0+cpu (due to performance regression per https://github.com/pytorch/pytorch/pull/151218)
+# For aarch64/ppc64le/Darwin: torch==2.8.0 (regular PyTorch)
 cmake>=3.26.1
 ninja
 packaging>=24.2
 setuptools>=77.0.3,<80.0.0
 setuptools-scm>=8
 --extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.6.0+cpu
+torch==2.6.0+cpu; platform_machine == "x86_64"
+torch==2.8.0; platform_machine == "aarch64" or platform_machine == "ppc64le" or platform_system == "Darwin"
 wheel
 jinja2>=3.1.6
-regex
+regex==2024.9.11
