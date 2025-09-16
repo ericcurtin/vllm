@@ -46,7 +46,9 @@ class LoadConfig:
     - "gguf" will load weights from GGUF format files (details specified in
     https://github.com/ggml-org/ggml/blob/master/docs/gguf.md).\n
     - "mistral" will load weights from consolidated safetensors files used by
-    Mistral models.
+    Mistral models.\n
+    - "docker_repo" will pull weights from Docker registries as OCI artifacts
+    (requires --docker-repo to be specified).\n
     - Other custom values can be supported via plugins."""
     download_dir: Optional[str] = None
     """Directory to download and load the weights, default to the default
@@ -82,6 +84,14 @@ class LoadConfig:
     {"cuda:1": "cuda:0"}. Note that when passed from command line, the strings
     in dictionary needs to be double quoted for json parsing. For more details,
     see original doc for `map_location` in https://pytorch.org/docs/stable/generated/torch.load.html
+    """
+    docker_repo: Optional[str] = None
+    """Docker repository to pull model weights from. When specified, model
+    weights will be pulled from the Docker registry as OCI artifacts instead
+    of from HuggingFace. Format: [registry/]repository[:tag]. Examples:
+    - "myregistry.com/org/model:v1.0"
+    - "docker.io/myorg/llama-model:latest"
+    - "myorg/model" (uses Docker Hub as default registry)
     """
 
     def compute_hash(self) -> str:

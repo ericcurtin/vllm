@@ -118,6 +118,164 @@ of PyTorch Nightly and should be considered **experimental**. Using the flag `--
     docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
     ```
 
+## Loading Models from Docker Registries
+
+vLLM supports loading model weights directly from Docker registries as OCI (Open Container Initiative) artifacts. This allows you to store and distribute models through Docker registries instead of HuggingFace Hub.
+
+### Using Docker Registry Models
+
+To load a model from a Docker registry, use the `--docker-repo` option along with `--load-format docker_repo`:
+
+```bash
+# Load from Docker Hub
+vllm serve --load-format docker_repo --docker-repo myorg/llama-model:v1.0 meta-llama/Llama-2-7b-hf
+
+# Load from a private registry  
+vllm serve --load-format docker_repo --docker-repo myregistry.com/models/llama:latest meta-llama/Llama-2-7b-hf
+
+# Load from a specific tag
+vllm serve --load-format docker_repo --docker-repo docker.io/myorg/model:v2.1 microsoft/DialoGPT-medium
+```
+
+The `--docker-repo` parameter specifies the Docker repository in the format `[registry/]repository[:tag]`:
+
+- `myorg/model` - Uses Docker Hub as default registry
+- `myregistry.com/org/model:v1.0` - Uses custom registry with tag
+- `docker.io/myorg/model:latest` - Explicit Docker Hub reference
+
+### Publishing Models to Docker Registries
+
+You can publish HuggingFace models to Docker registries using the provided tool:
+
+```bash
+# Download and publish a model to Docker Hub
+python tools/docker_model_publisher.py \
+    --model microsoft/DialoGPT-medium \
+    --docker-repo myorg/dialogpt:v1.0 \
+    --push
+
+# Publish to a private registry
+python tools/docker_model_publisher.py \
+    --model meta-llama/Llama-2-7b-hf \
+    --docker-repo myregistry.com/models/llama:v2.0 \
+    --push
+```
+
+The tool supports various options:
+
+- `--model`: HuggingFace model ID to download
+- `--docker-repo`: Target Docker repository  
+- `--revision`: Specific model revision/branch
+- `--cache-dir`: Local cache directory for models
+- `--push`: Automatically push to registry after packaging
+- `--output-dir`: Directory to save OCI layout locally
+
+### OCI Artifact Format for vLLM Models
+
+vLLM uses a standardized OCI artifact format for storing models in Docker registries:
+
+#### Artifact Structure
+
+```
+OCI Artifact
+├── Manifest (application/vnd.oci.image.manifest.v1+json)
+│   ├── Config (minimal empty JSON)
+│   └── Layers
+│       └── Model Layer (application/vnd.oci.image.layer.v1.tar+gzip)
+│           ├── *.safetensors (preferred)
+│           ├── *.bin (PyTorch weights)
+│           ├── *.pt (PyTorch weights)
+│           ├── config.json (model configuration)
+│           ├── tokenizer.json (tokenizer configuration)
+│           └── other model files
+```
+
+#### Manifest Annotations
+
+The OCI manifest includes standardized annotations:
+
+```json
+{
+  "annotations": {
+    "org.opencontainers.image.description": "vLLM compatible model",
+    "org.opencontainers.image.title": "Model Name",
+    "vllm.model.format": "safetensors",
+    "vllm.model.architecture": "LlamaForCausalLM",
+    "vllm.model.precision": "float16"
+  }
+}
+```
+
+#### Layer Contents
+
+The model layer contains a compressed tar archive with:
+
+- **Weight files**: `*.safetensors` (preferred), `*.bin`, or `*.pt`
+- **Configuration**: `config.json`, `tokenizer.json`, `tokenizer_config.json`  
+- **Model files**: `pytorch_model.bin.index.json`, `model.safetensors.index.json`
+- **Other files**: README, license, etc.
+
+#### Supported Weight Formats
+
+- **Safetensors** (recommended): Fast loading, memory-efficient
+- **PyTorch binary**: Standard `.bin` and `.pt` files
+- **Sharded models**: Multiple weight files with index
+
+### Requirements
+
+To use Docker registry model loading, you need:
+
+- **skopeo**: OCI artifact operations
+  ```bash
+  # Ubuntu/Debian
+  sudo apt-get install skopeo
+  
+  # macOS
+  brew install skopeo
+  
+  # From source
+  # See: https://github.com/containers/skopeo
+  ```
+
+- **Registry authentication** (for private registries):
+  ```bash
+  # Login to registry
+  docker login myregistry.com
+  # or
+  skopeo login myregistry.com
+  ```
+
+### Example Workflow
+
+1. **Publish a model**:
+   ```bash
+   python tools/docker_model_publisher.py \
+       --model microsoft/DialoGPT-medium \
+       --docker-repo myorg/dialogpt:v1.0 \
+       --push
+   ```
+
+2. **Use the model**:
+   ```bash
+   vllm serve \
+       --load-format docker_repo \
+       --docker-repo myorg/dialogpt:v1.0 \
+       microsoft/DialoGPT-medium
+   ```
+
+3. **Verify the model**:
+   ```bash
+   skopeo inspect docker://myorg/dialogpt:v1.0
+   ```
+
+### Benefits
+
+- **Centralized storage**: Use existing Docker infrastructure
+- **Access control**: Leverage registry authentication and authorization
+- **Caching**: Docker registry caching for faster downloads
+- **Versioning**: Tag-based model versioning
+- **Air-gapped environments**: Local registry deployment
+
     After setting up QEMU, you can use the `--platform "linux/arm64"` flag in your `docker build` command.
 
 ## Use the custom-built vLLM Docker image

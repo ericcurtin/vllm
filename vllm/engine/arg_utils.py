@@ -609,6 +609,8 @@ class EngineArgs:
                                 **load_kwargs["use_tqdm_on_load"])
         load_group.add_argument('--pt-load-map-location',
                                 **load_kwargs["pt_load_map_location"])
+        load_group.add_argument("--docker-repo",
+                                **load_kwargs["docker_repo"])
 
         # Guided decoding arguments
         guided_decoding_kwargs = get_kwargs(DecodingConfig)
