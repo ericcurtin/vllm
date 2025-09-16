@@ -12,6 +12,7 @@ from vllm.model_executor.model_loader.base_loader import BaseModelLoader
 from vllm.model_executor.model_loader.bitsandbytes_loader import (
     BitsAndBytesModelLoader)
 from vllm.model_executor.model_loader.default_loader import DefaultModelLoader
+from vllm.model_executor.model_loader.docker_repo_loader import DockerRepoModelLoader
 from vllm.model_executor.model_loader.dummy_loader import DummyModelLoader
 from vllm.model_executor.model_loader.gguf_loader import GGUFModelLoader
 from vllm.model_executor.model_loader.runai_streamer_loader import (
@@ -29,6 +30,7 @@ logger = init_logger(__name__)
 LoadFormats = Literal[
     "auto",
     "bitsandbytes",
+    "docker_repo",
     "dummy",
     "fastsafetensors",
     "gguf",
@@ -44,6 +46,7 @@ LoadFormats = Literal[
 _LOAD_FORMAT_TO_MODEL_LOADER: dict[str, type[BaseModelLoader]] = {
     "auto": DefaultModelLoader,
     "bitsandbytes": BitsAndBytesModelLoader,
+    "docker_repo": DockerRepoModelLoader,
     "dummy": DummyModelLoader,
     "fastsafetensors": DefaultModelLoader,
     "gguf": GGUFModelLoader,
@@ -129,6 +132,7 @@ __all__ = [
     "register_model_loader",
     "BaseModelLoader",
     "BitsAndBytesModelLoader",
+    "DockerRepoModelLoader",
     "GGUFModelLoader",
     "DefaultModelLoader",
     "DummyModelLoader",
