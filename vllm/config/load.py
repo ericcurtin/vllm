@@ -51,6 +51,10 @@ class LoadConfig:
     download_dir: Optional[str] = None
     """Directory to download and load the weights, default to the default
     cache directory of Hugging Face."""
+    docker_repo: Optional[str] = None
+    """Docker repository to pull model as OCI artifact (e.g., 'ai/deepseek-v3').
+    When specified, models are downloaded from Docker Hub as OCI artifacts
+    instead of from Hugging Face Hub. Mutually exclusive with model."""
     safetensors_load_strategy: str = "lazy"
     """Specifies the loading strategy for safetensors weights.
     - "lazy" (default): Weights are memory-mapped from the file. This enables

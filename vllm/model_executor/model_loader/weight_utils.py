@@ -29,6 +29,7 @@ from vllm.distributed import get_tensor_model_parallel_rank
 from vllm.logger import init_logger
 from vllm.model_executor.layers.quantization import (QuantizationConfig,
                                                      get_quantization_config)
+from vllm.model_executor.model_loader.oci_utils import download_model_from_docker_hub
 from vllm.platforms import current_platform
 from vllm.utils import PlaceholderModule
 
@@ -369,6 +370,48 @@ def download_weights_from_hf(
             logger.info("Time spent downloading weights for %s: %.6f seconds",
                         model_name_or_path, time_taken)
     return hf_folder
+
+
+def download_weights_from_docker_hub(
+    docker_repo: str,
+    cache_dir: Optional[str],
+    allow_patterns: list[str],
+    tag: str = "latest",
+) -> str:
+    """Download model weights from Docker Hub as OCI artifact.
+
+    Args:
+        docker_repo (str): The Docker repository name (e.g., 'ai/deepseek-v3').
+        cache_dir (Optional[str]): The cache directory to store the model
+            weights. If None, will use default cache directory.
+        allow_patterns (list[str]): The allowed patterns for the
+            weight files. Files matched by any of the patterns will be
+            downloaded.
+        tag (str): The Docker tag to download (default: 'latest').
+
+    Returns:
+        str: The path to the downloaded model weights.
+    """
+    assert len(allow_patterns) > 0
+    
+    logger.info("Using docker repo %s with patterns %s", docker_repo, allow_patterns)
+    
+    start_time = time.perf_counter()
+    try:
+        model_folder = download_model_from_docker_hub(
+            docker_repo=docker_repo,
+            cache_dir=cache_dir,
+            tag=tag,
+            allow_patterns=allow_patterns,
+        )
+        time_taken = time.perf_counter() - start_time
+        if time_taken > 0.5:
+            logger.info("Time spent downloading weights for %s: %.6f seconds",
+                        docker_repo, time_taken)
+        return model_folder
+    except Exception as e:
+        logger.error("Failed to download model from Docker Hub %s: %s", docker_repo, e)
+        raise
 
 
 def download_safetensors_index_file_from_hf(

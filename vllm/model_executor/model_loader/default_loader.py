@@ -17,6 +17,7 @@ from vllm.logger import init_logger
 from vllm.model_executor.model_loader.base_loader import BaseModelLoader
 from vllm.model_executor.model_loader.weight_utils import (
     download_safetensors_index_file_from_hf, download_weights_from_hf,
+    download_weights_from_docker_hub,
     fastsafetensors_weights_iterator, filter_duplicate_safetensors_files,
     filter_files_not_needed_for_inference, maybe_download_from_modelscope,
     multi_thread_pt_weights_iterator,
@@ -77,10 +78,13 @@ class DefaultModelLoader(BaseModelLoader):
         """Prepare weights for the model.
 
         If the model is not local, it will be downloaded."""
-        model_name_or_path = (maybe_download_from_modelscope(
-            model_name_or_path, revision) or model_name_or_path)
+        # Only use ModelScope download if not using docker repo
+        if self.load_config.docker_repo is None:
+            model_name_or_path = (maybe_download_from_modelscope(
+                model_name_or_path, revision) or model_name_or_path)
 
         is_local = os.path.isdir(model_name_or_path)
+        is_docker_repo = self.load_config.docker_repo is not None
         load_format = self.load_config.load_format
         use_safetensors = False
         index_file = SAFE_WEIGHTS_INDEX_NAME
@@ -109,13 +113,21 @@ class DefaultModelLoader(BaseModelLoader):
             allow_patterns = allow_patterns_overrides
 
         if not is_local:
-            hf_folder = download_weights_from_hf(
-                model_name_or_path,
-                self.load_config.download_dir,
-                allow_patterns,
-                revision,
-                ignore_patterns=self.load_config.ignore_patterns,
-            )
+            # Check if we should download from Docker Hub instead of HF
+            if is_docker_repo:
+                hf_folder = download_weights_from_docker_hub(
+                    self.load_config.docker_repo,
+                    self.load_config.download_dir,
+                    allow_patterns,
+                )
+            else:
+                hf_folder = download_weights_from_hf(
+                    model_name_or_path,
+                    self.load_config.download_dir,
+                    allow_patterns,
+                    revision,
+                    ignore_patterns=self.load_config.ignore_patterns,
+                )
         else:
             hf_folder = model_name_or_path
 
