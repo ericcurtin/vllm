@@ -185,3 +185,27 @@ def test_middleware(serve_parser, cli_args, expected_middleware):
     """Ensure multiple middleware args are parsed properly"""
     args = serve_parser.parse_args(args=cli_args)
     assert args.middleware == expected_middleware
+
+
+### Tests for docker-repo argument
+def test_docker_repo_argument(serve_parser):
+    """Ensure --docker-repo argument is parsed correctly"""
+    args = serve_parser.parse_args(args=["--docker-repo", "ai/deepseek-v3"])
+    assert args.docker_repo == "ai/deepseek-v3"
+
+
+def test_docker_repo_default_none(serve_parser):
+    """Ensure docker_repo defaults to None when not specified"""
+    args = serve_parser.parse_args(args=[])
+    assert args.docker_repo is None
+
+
+def test_mutually_exclusive_model_docker_repo(serve_parser):
+    """Ensure --model and --docker-repo cannot be used together"""
+    # This should work fine (only --docker-repo)
+    args = serve_parser.parse_args(args=["--docker-repo", "ai/deepseek-v3"])
+    assert args.docker_repo == "ai/deepseek-v3"
+    
+    # This should also work fine (only --model)
+    args = serve_parser.parse_args(args=["--model", "Qwen/Qwen2.5-3B-Instruct"])
+    assert args.model == "Qwen/Qwen2.5-3B-Instruct"
