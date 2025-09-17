@@ -281,6 +281,10 @@ class ModelConfig:
     """Name or path of the Hugging Face model to use. It is also used as the
     content for `model_name` tag in metrics output when `served_model_name` is
     not specified."""
+    docker_repo: Optional[str] = None
+    """Docker Hub repository to pull the model from instead of HuggingFace.
+    When specified, the model will be pulled from Docker Hub rather than
+    HuggingFace. This option is mutually exclusive with the model parameter."""
     runner: RunnerOption = "auto"
     """The type of model runner to use. Each vLLM instance only supports one
     model runner, even if the same model can be used for multiple types."""
@@ -547,6 +551,18 @@ class ModelConfig:
         return hashlib.sha256(str(factors).encode()).hexdigest()
 
     def __post_init__(self) -> None:
+        # Validate that model and docker_repo are mutually exclusive
+        if self.docker_repo is not None and self.model != "Qwen/Qwen3-0.6B":
+            raise ValueError(
+                "Cannot specify both --model and --docker-repo. "
+                "Please use either --model for HuggingFace models or "
+                "--docker-repo for Docker Hub models."
+            )
+        
+        # If docker_repo is specified, set model to the docker repo path
+        if self.docker_repo is not None:
+            self.model = self.docker_repo
+
         # Set the default seed to 0 in V1.
         # NOTE(woosuk): In V0, we set the default seed to None because the
         # driver worker shares the same process as the user process, and thus

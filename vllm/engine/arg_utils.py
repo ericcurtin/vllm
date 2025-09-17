@@ -282,6 +282,7 @@ def get_kwargs(cls: ConfigType) -> dict[str, Any]:
 class EngineArgs:
     """Arguments for vLLM engine."""
     model: str = ModelConfig.model
+    docker_repo: Optional[str] = ModelConfig.docker_repo
     served_model_name: Optional[Union[
         str, List[str]]] = ModelConfig.served_model_name
     tokenizer: Optional[str] = ModelConfig.tokenizer
@@ -503,6 +504,7 @@ class EngineArgs:
         )
         if not ('serve' in sys.argv[1:] and '--help' in sys.argv[1:]):
             model_group.add_argument("--model", **model_kwargs["model"])
+        model_group.add_argument("--docker-repo", **model_kwargs["docker_repo"])
         model_group.add_argument("--runner", **model_kwargs["runner"])
         model_group.add_argument("--convert", **model_kwargs["convert"])
         model_group.add_argument("--task",
@@ -972,6 +974,7 @@ class EngineArgs:
 
         return ModelConfig(
             model=self.model,
+            docker_repo=self.docker_repo,
             hf_config_path=self.hf_config_path,
             runner=self.runner,
             convert=self.convert,
