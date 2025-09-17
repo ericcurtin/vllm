@@ -295,6 +295,7 @@ class EngineArgs:
     trust_remote_code: bool = ModelConfig.trust_remote_code
     allowed_local_media_path: str = ModelConfig.allowed_local_media_path
     download_dir: Optional[str] = LoadConfig.download_dir
+    docker_repo: Optional[str] = LoadConfig.docker_repo
     safetensors_load_strategy: str = LoadConfig.safetensors_load_strategy
     load_format: Union[str, LoadFormats] = LoadConfig.load_format
     config_format: str = ModelConfig.config_format
@@ -480,6 +481,23 @@ class EngineArgs:
                 **self.compilation_config)
         if isinstance(self.eplb_config, dict):
             self.eplb_config = EPLBConfig(**self.eplb_config)
+        
+        # Validate docker_repo and model are mutually exclusive
+        if (self.docker_repo is not None and 
+            hasattr(self, 'model_tag') and 
+            self.model_tag is not None and 
+            self.model != ModelConfig.model):
+            raise ValueError(
+                "Cannot specify both --docker-repo and model arguments. "
+                "Use --docker-repo to pull models from Docker Hub as OCI artifacts, "
+                "or specify a model to load from Hugging Face Hub or local path.")
+        
+        # If docker_repo is set and no explicit model is provided, use a placeholder
+        if (self.docker_repo is not None and 
+            self.model == ModelConfig.model):
+            # Use docker_repo as model identifier for internal purposes
+            self.model = f"docker://{self.docker_repo}"
+        
         # Setup plugins
         from vllm.plugins import load_general_plugins
         load_general_plugins()
@@ -599,6 +617,8 @@ class EngineArgs:
         load_group.add_argument("--load-format", **load_kwargs["load_format"])
         load_group.add_argument("--download-dir",
                                 **load_kwargs["download_dir"])
+        load_group.add_argument("--docker-repo",
+                                **load_kwargs["docker_repo"])
         load_group.add_argument("--safetensors-load-strategy",
                                 **load_kwargs["safetensors_load_strategy"])
         load_group.add_argument("--model-loader-extra-config",
@@ -1048,6 +1068,7 @@ class EngineArgs:
         return LoadConfig(
             load_format=self.load_format,
             download_dir=self.download_dir,
+            docker_repo=self.docker_repo,
             safetensors_load_strategy=self.safetensors_load_strategy,
             device="cpu"
             if is_online_quantization(self.quantization) else None,
