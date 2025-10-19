@@ -70,10 +70,6 @@ class OciGoClient:
         ]
         self.lib.PullBlob.restype = ErrorResult
 
-        # FreeString
-        self.lib.FreeString.argtypes = [ctypes.c_char_p]
-        self.lib.FreeString.restype = None
-
         # TestAuthentication
         self.lib.TestAuthentication.argtypes = [ctypes.c_char_p]
         self.lib.TestAuthentication.restype = ErrorResult
@@ -92,22 +88,15 @@ class OciGoClient:
         """
         result = self.lib.PullManifest(image_ref.encode("utf-8"))
 
-        try:
-            if result.error:
-                error_msg = result.error.decode("utf-8")
-                raise RuntimeError(f"Failed to pull manifest: {error_msg}")
+        if result.error:
+            error_msg = result.error.decode("utf-8")
+            raise RuntimeError(f"Failed to pull manifest: {error_msg}")
 
-            if not result.manifest_json:
-                raise RuntimeError("No manifest returned")
+        if not result.manifest_json:
+            raise RuntimeError("No manifest returned")
 
-            manifest_str = result.manifest_json.decode("utf-8")
-            return json.loads(manifest_str)
-        finally:
-            # Free C strings
-            if result.manifest_json:
-                self.lib.FreeString(result.manifest_json)
-            if result.error:
-                self.lib.FreeString(result.error)
+        manifest_str = result.manifest_json.decode("utf-8")
+        return json.loads(manifest_str)
 
     def pull_blob(self, image_ref: str, digest: str, output_path: str) -> None:
         """Pull a blob (layer) from the OCI registry.
@@ -126,13 +115,9 @@ class OciGoClient:
             output_path.encode("utf-8"),
         )
 
-        try:
-            if result.error:
-                error_msg = result.error.decode("utf-8")
-                raise RuntimeError(f"Failed to pull blob: {error_msg}")
-        finally:
-            if result.error:
-                self.lib.FreeString(result.error)
+        if result.error:
+            error_msg = result.error.decode("utf-8")
+            raise RuntimeError(f"Failed to pull blob: {error_msg}")
 
     def test_authentication(self, image_ref: str) -> Optional[str]:
         """Test if authentication is working for the given image reference.
@@ -145,10 +130,7 @@ class OciGoClient:
         """
         result = self.lib.TestAuthentication(image_ref.encode("utf-8"))
 
-        try:
-            if result.error:
-                return result.error.decode("utf-8")
-            return None
-        finally:
-            if result.error:
-                self.lib.FreeString(result.error)
+        if result.error:
+            error_msg = result.error.decode("utf-8")
+            return error_msg
+        return None
