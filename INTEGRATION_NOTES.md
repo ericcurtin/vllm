@@ -213,13 +213,25 @@ Subsequent loads use cached layers, avoiding re-downloads.
 
 ### Memory
 
-The Go library uses Go's garbage collector for memory management. Memory allocated by Go (via `C.CString`) is managed automatically and does not require explicit freeing from Python.
+The Go library uses Go's garbage collector for memory management. Note on CGO memory:
+- Strings returned from Go functions (via `C.CString`) remain valid for the lifetime of the program
+- The current implementation does not explicitly free these strings, which is acceptable for long-lived processes
+- For high-frequency operations, consider implementing a proper free mechanism
+- Memory allocated on the Go side is managed by Go's GC and doesn't require Python intervention
 
 ## Security Considerations
 
-1. **Credential Storage**: Docker config files may contain plaintext credentials. Use credential helpers when possible.
+1. **Credential Storage**: 
+   - Docker config files (`~/.docker/config.json`) may contain plaintext credentials
+   - **Recommended**: Use Docker credential helpers instead:
+     - AWS ECR: `docker-credential-ecr-login`
+     - Google GCR: `docker-credential-gcr`
+     - Azure ACR: `docker-credential-acr-env`
+   - Ensure Docker config file has restrictive permissions: `chmod 600 ~/.docker/config.json`
+   - Consider using keychain-based credential storage on desktop systems
 2. **TLS**: All registry communication uses HTTPS/TLS by default.
 3. **Digest Verification**: OCI digests (SHA256) are verified during download.
+4. **Private Images**: Always authenticate before pulling private images to avoid exposing registry URLs
 
 ## Future Improvements
 
